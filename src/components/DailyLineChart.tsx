@@ -22,12 +22,12 @@ function formatXAxis(date: string, dayOfWeek: string): string {
 // 별표 커스텀 dot (Peak)
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const PeakDot = (props: any) => {
-  const { cx, cy, payload } = props;
+  const { cx, cy, payload, index } = props;
   if (!payload?.isPeak || cx === undefined || cy === undefined) {
-    return <Dot cx={cx} cy={cy} r={0} fill="transparent" />;
+    return <Dot key={`peak-empty-${index}`} cx={cx} cy={cy} r={0} fill="transparent" />;
   }
   return (
-    <text x={cx} y={(cy ?? 0) - 10} textAnchor="middle" fontSize={16} fill="#282828">
+    <text key={`peak-${index}`} x={cx} y={(cy ?? 0) - 10} textAnchor="middle" fontSize={16} fill="#282828">
       ★
     </text>
   );
@@ -88,9 +88,9 @@ const DailyLineChart: React.FC<DailyLineChartProps> = ({ data, liveDates, onDayC
                 key={ld}
                 x={entry.xLabel}
                 yAxisId="amount"
-                stroke="#336DFF"
+                stroke="#DC2626"
                 strokeDasharray="4 4"
-                label={{ value: 'LIVE', position: 'top', fill: '#336DFF', fontSize: 11 }}
+                label={{ value: 'LIVE', position: 'top', fill: '#DC2626', fontSize: 11 }}
               />
             );
           })}
@@ -133,7 +133,7 @@ const DailyLineChart: React.FC<DailyLineChartProps> = ({ data, liveDates, onDayC
             type="monotone"
             dataKey="couponTotal"
             name="쿠폰합계"
-            stroke="#336DFF"
+            stroke="#DC2626"
             strokeWidth={2}
             dot={false}
             activeDot={{ r: 4 }}

@@ -1,7 +1,8 @@
 import React from 'react';
 import KpiCard from './KpiCard';
-import type { KpiSummary, PromotionRecord, DailyTimeSeries } from '../types/index';
+import type { KpiSummary, PromotionRecord, DailyTimeSeries, LiveDayResult } from '../types/index';
 import { formatCurrency, formatRate, formatNumber } from '../utils/format';
+import { usePromotionStore } from '../stores/promotionStore';
 
 interface ParsedInfo {
   hasSales: boolean;
@@ -75,7 +76,7 @@ const KPI_ROWS: KpiRow[] = [
     needsSales: true,
   },
   {
-    label: '환불률',
+    label: '환불률(금액기준)',
     getValue: (k) => k.refundRate.toFixed(1) + '%',
     isInverted: true,
     needsProducts: true,
@@ -110,29 +111,28 @@ interface ColumnProps {
   parsed: ParsedInfo;
   context?: PromotionRecord | null;
   colTimeSeries?: DailyTimeSeries[];
+  colLiveNetSales?: LiveDayResult[];
   onClose?: () => void;
 }
 
-const ComparisonColumn: React.FC<ColumnProps> = ({ title, subtitle, kpis, parsed, context, colTimeSeries = [], onClose }) => {
+const ComparisonColumn: React.FC<ColumnProps> = ({ title, subtitle, kpis, parsed, context, colTimeSeries = [], colLiveNetSales = [], onClose }) => {
   // 2행 카드: 일평균 순매출 + 라이브일자 순매출
   const extraCards: { label: string; value: string }[] = [];
 
-  if (parsed.hasSales && kpis && context?.startDate && context?.endDate) {
-    const days = countDays(context.startDate, context.endDate);
-    const dailyAvg = Math.round(kpis.netSales / days);
+  if (parsed.hasSales && kpis && colTimeSeries.length > 0) {
+    const dailyAvg = Math.round(kpis.netSales / colTimeSeries.length);
     extraCards.push({ label: '일평균 순매출', value: formatCurrency(dailyAvg) });
   } else if (!parsed.hasSales) {
     extraCards.push({ label: '일평균 순매출', value: '-' });
   }
 
-  if (parsed.hasSales) {
-    const liveDays = colTimeSeries.filter((d) => d.isLiveDate);
-    if (liveDays.length === 1) {
-      extraCards.push({ label: '라이브 순매출', value: formatCurrency(liveDays[0].netSales) });
-    } else if (liveDays.length >= 2) {
-      const liveTotal = liveDays.reduce((sum, d) => sum + d.netSales, 0);
+  if (parsed.hasSales && colLiveNetSales.length > 0) {
+    if (colLiveNetSales.length === 1) {
+      extraCards.push({ label: '라이브 순매출', value: formatCurrency(colLiveNetSales[0].netSales) });
+    } else {
+      const liveTotal = colLiveNetSales.reduce((sum, d) => sum + d.netSales, 0);
       extraCards.push({ label: '라이브 합계', value: formatCurrency(liveTotal) });
-      liveDays.forEach((day, i) => {
+      colLiveNetSales.forEach((day, i) => {
         extraCards.push({ label: `라이브 ${i + 1}일차 (${day.date.slice(5)})`, value: formatCurrency(day.netSales) });
       });
     }
@@ -142,8 +142,8 @@ const ComparisonColumn: React.FC<ColumnProps> = ({ title, subtitle, kpis, parsed
     <div className="flex flex-col gap-3 min-w-0 bg-gray-50 border border-gray-200 rounded-lg p-4">
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0 border-l-4 border-blue pl-2">
-          <p className="text-sm font-bold text-gray-900 truncate">{title}</p>
-          {subtitle && <p className="text-xs text-gray-500 truncate">{subtitle}</p>}
+          <p className="text-sm font-bold text-gray-900">{title}</p>
+          {subtitle && <p className="text-xs text-gray-500">{subtitle}</p>}
         </div>
         {onClose && (
           <button
@@ -193,6 +193,9 @@ const ComparisonSection: React.FC<ComparisonSectionProps> = ({
   onClose,
   onUpload,
 }) => {
+  const pdfCaptureMode = usePromotionStore((s) => s.pdfCaptureMode);
+  const storeLiveNetSales = usePromotionStore((s) => s.liveNetSales);
+  const storeCompareLiveNetSales = usePromotionStore((s) => s.compareLiveNetSales);
   const hasCompare = compareKpis.some((k) => k !== null);
 
   if (!hasCompare) {
@@ -208,7 +211,9 @@ const ComparisonSection: React.FC<ComparisonSectionProps> = ({
             parsed={currentParsed}
             context={currentContext}
             colTimeSeries={currentTimeSeries}
+            colLiveNetSales={storeLiveNetSales}
           />
+          {!pdfCaptureMode && (
           <div className="mt-6 flex flex-col items-center gap-3 py-6 border-t border-gray-100">
             <p className="text-sm text-gray-500">
               이전 행사 파일을 업로드하면 비교 분석이 가능합니다
@@ -221,6 +226,7 @@ const ComparisonSection: React.FC<ComparisonSectionProps> = ({
               파일 업로드
             </button>
           </div>
+          )}
         </div>
       </section>
     );
@@ -239,6 +245,7 @@ const ComparisonSection: React.FC<ComparisonSectionProps> = ({
           parsed={currentParsed}
           context={currentContext}
           colTimeSeries={currentTimeSeries}
+          colLiveNetSales={storeLiveNetSales}
         />
 
         {/* 비교 행사 */}
@@ -254,6 +261,7 @@ const ComparisonSection: React.FC<ComparisonSectionProps> = ({
             parsed={compareParsed[0] ?? EMPTY_PARSED}
             context={compareContexts[0] ?? null}
             colTimeSeries={compareTimeSeries[0] ?? []}
+            colLiveNetSales={storeCompareLiveNetSales[0] ?? []}
             onClose={() => onClose(0)}
           />
         )}

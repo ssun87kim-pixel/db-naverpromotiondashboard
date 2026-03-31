@@ -128,6 +128,8 @@ const CompareEventUpload: React.FC<Props> = ({ index, onFilesChange, onContextCh
   const [targetAmount, setTargetAmount] = useState(0);
   const [targetAmountDisplay, setTargetAmountDisplay] = useState('');
   const [liveDates, setLiveDates] = useState<string[]>([]);
+  const [liveStartHour, setLiveStartHour] = useState<number | undefined>(undefined);
+  const [liveEndHour, setLiveEndHour] = useState<number | undefined>(undefined);
   const startDateRef = useRef<HTMLInputElement>(null);
   const endDateRef = useRef<HTMLInputElement>(null);
 
@@ -304,6 +306,44 @@ const CompareEventUpload: React.FC<Props> = ({ index, onFilesChange, onContextCh
             handleContextChange({ liveDates: dates });
           }}
         />
+        {liveDates.length > 0 && (
+          <div className="grid grid-cols-2 gap-3 mt-2">
+            <div>
+              <label className="block text-xs text-gray-500 mb-1">라이브 시작시간</label>
+              <select
+                value={liveStartHour ?? ''}
+                onChange={(e) => {
+                  const v = e.target.value === '' ? undefined : Number(e.target.value);
+                  setLiveStartHour(v);
+                  handleContextChange({ liveStartHour: v });
+                }}
+                className={inputClass}
+              >
+                <option value="">선택</option>
+                {Array.from({ length: 24 }, (_, i) => (
+                  <option key={i} value={i}>{i}시</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs text-gray-500 mb-1">라이브 종료시간</label>
+              <select
+                value={liveEndHour ?? ''}
+                onChange={(e) => {
+                  const v = e.target.value === '' ? undefined : Number(e.target.value);
+                  setLiveEndHour(v);
+                  handleContextChange({ liveEndHour: v });
+                }}
+                className={inputClass}
+              >
+                <option value="">선택</option>
+                {Array.from({ length: 24 }, (_, i) => (
+                  <option key={i} value={i}>{i}시</option>
+                ))}
+              </select>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* 파일 업로드 존 3개 */}
@@ -332,6 +372,22 @@ const CompareEventUpload: React.FC<Props> = ({ index, onFilesChange, onContextCh
           onFile={handleFile('category')}
           onRemove={handleRemove('category')}
         />
+        <div style={{ marginTop: 8, padding: '10px 12px', background: 'rgba(255,220,30,0.12)', border: '1px solid #FFDC1E', borderRadius: 8 }} className="space-y-1.5">
+          <p className="text-xs font-bold" style={{ color: '#282828' }}>★ 카테고리 파일 작성 시 주의사항</p>
+          <ul className="text-xs leading-relaxed list-disc pl-4 space-y-0.5" style={{ color: '#515151' }}>
+            <li>첫 번째 행(헤더)에 반드시 <span className="font-bold" style={{ color: '#282828' }}>구분, 대분류, 상품코드</span> 항목명 기입</li>
+            <li><span className="font-bold" style={{ color: '#282828' }}>상품코드</span> 열에는 <span className="font-bold" style={{ color: '#282828' }}>네이버 상품ID</span>를 입력 (상품성과 파일의 상품ID와 매칭)</li>
+            <li>항목명이 다르면 인식되지 않아 <span className="font-semibold" style={{ color: '#F72B35' }}>전체 "미매칭" 처리</span>됩니다</li>
+          </ul>
+          <div className="flex items-start gap-1 pt-0.5">
+            <span className="text-xs shrink-0" style={{ color: '#515151' }}>예시)</span>
+            <div className="flex gap-0 text-xs rounded overflow-hidden" style={{ border: '1px solid #FFDC1E' }}>
+              <span className="px-1.5 py-0.5 font-semibold" style={{ background: 'rgba(255,220,30,0.20)', color: '#282828', borderRight: '1px solid #FCD34D' }}>구분</span>
+              <span className="px-1.5 py-0.5 font-semibold" style={{ background: 'rgba(255,220,30,0.20)', color: '#282828', borderRight: '1px solid #FCD34D' }}>대분류</span>
+              <span className="px-1.5 py-0.5 font-semibold" style={{ background: 'rgba(255,220,30,0.20)', color: '#282828' }}>상품코드</span>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );

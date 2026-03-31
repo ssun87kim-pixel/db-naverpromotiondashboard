@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { exportExcel, exportPdf } from '../services/ReportService';
 import type { ReportData } from '../services/ReportService';
+import { usePromotionStore } from '../stores/promotionStore';
 
 // ============================================================
 // Props
@@ -19,11 +20,18 @@ const DownloadButtons: React.FC<DownloadButtonsProps> = ({
   reportData,
   dashboardElementId,
 }) => {
+  const containerRef = useRef<HTMLDivElement>(null);
   const [excelLoading, setExcelLoading] = useState(false);
   const [pdfLoading, setPdfLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   const isDisabled = reportData === null;
+
+  const showToast = (msg: string) => {
+    setToastMessage(msg);
+    setTimeout(() => setToastMessage(null), 6000);
+  };
 
   const handleExcelDownload = async () => {
     if (!reportData) return;
@@ -43,7 +51,21 @@ const DownloadButtons: React.FC<DownloadButtonsProps> = ({
     if (!reportData) return;
     setErrorMessage(null);
     setPdfLoading(true);
+
+    // PDF 캡처 모드 ON (상품 테이블 접기 + 입력 패널 접기)
+    const store = usePromotionStore.getState();
+    const panelWasOpen = store.inputPanelOpen;
+    store.setPdfCaptureMode(true);
+    if (panelWasOpen) store.toggleInputPanel();
+    showToast('PDF 생성: 입력 패널을 접고, 상품은 구분 단위로 표시됩니다');
+
     try {
+      // DOM 업데이트 + 레이아웃 완전 안정화 대기
+      await new Promise((r) => setTimeout(r, 500));
+      containerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      await new Promise((r) => setTimeout(r, 1500));
+      await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(() => r(undefined))));
+
       const eventName = reportData.context.eventName;
       const today = new Date();
       const dateStr = `${today.getFullYear()}${String(today.getMonth() + 1).padStart(2, '0')}${String(today.getDate()).padStart(2, '0')}`;
@@ -53,12 +75,22 @@ const DownloadButtons: React.FC<DownloadButtonsProps> = ({
       const msg = err instanceof Error ? err.message : '파일 생성에 실패했습니다. 다시 시도해주세요.';
       setErrorMessage(msg);
     } finally {
+      // 항상 복원
+      usePromotionStore.getState().setPdfCaptureMode(false);
+      if (panelWasOpen) usePromotionStore.getState().toggleInputPanel();
       setPdfLoading(false);
     }
   };
 
   return (
-    <div className="flex items-center gap-2">
+    <div ref={containerRef} className="flex items-center gap-2 relative">
+      {/* 토스트 메시지 */}
+      {toastMessage && (
+        <div className="absolute -top-10 right-0 bg-gray-800 text-white text-xs px-3 py-1.5 rounded-lg shadow-lg whitespace-nowrap animate-fade-in">
+          {toastMessage}
+        </div>
+      )}
+
       {/* 오류 메시지 */}
       {errorMessage && (
         <span className="text-xs text-red-600" role="alert">

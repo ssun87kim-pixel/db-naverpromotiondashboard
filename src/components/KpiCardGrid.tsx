@@ -1,6 +1,6 @@
 import React from 'react';
 import KpiCard from './KpiCard';
-import type { KpiSummary, DailyTimeSeries, PromotionRecord } from '../types/index';
+import type { KpiSummary, DailyTimeSeries, PromotionRecord, LiveDayResult } from '../types/index';
 import { formatCurrency, formatNumber, formatRate } from '../utils/format';
 
 interface KpiCardGridProps {
@@ -10,6 +10,7 @@ interface KpiCardGridProps {
   hasProducts: boolean;
   context: PromotionRecord | null;
   timeSeries: DailyTimeSeries[];
+  liveNetSales: LiveDayResult[];
 }
 
 /** startDate~endDate 사이의 일수 계산 */
@@ -20,7 +21,7 @@ function countDays(startDate: string, endDate: string): number {
   return Math.max(1, Math.round(diff / (1000 * 60 * 60 * 24)) + 1);
 }
 
-const KpiCardGrid: React.FC<KpiCardGridProps> = ({ kpis, targetAmount: _targetAmount, hasSales, hasProducts, context, timeSeries }) => {
+const KpiCardGrid: React.FC<KpiCardGridProps> = ({ kpis, targetAmount: _targetAmount, hasSales, hasProducts, context, timeSeries, liveNetSales }) => {
   const achievementStatus =
     kpis.achievementRate === null
       ? 'neutral'
@@ -37,7 +38,7 @@ const KpiCardGrid: React.FC<KpiCardGridProps> = ({ kpis, targetAmount: _targetAm
     { label: '객단가', value: kpis.avgOrderValue !== null ? formatCurrency(kpis.avgOrderValue) : '-', status: 'neutral' as const, needsSales: true, needsProducts: true },
     { label: '쿠폰합계', value: formatCurrency(kpis.couponTotal), status: 'neutral' as const, needsProducts: true },
     { label: '환불액', value: formatCurrency(kpis.refundAmount), status: 'neutral' as const, needsSales: true },
-    { label: '환불률', value: formatRate(kpis.refundRate), status: 'neutral' as const, isInverted: true, needsProducts: true },
+    { label: '환불률(금액기준)', value: formatRate(kpis.refundRate), status: 'neutral' as const, isInverted: true, needsSales: true },
   ];
 
   const row1 = allCards.filter((card: typeof allCards[number]) => {
@@ -49,20 +50,18 @@ const KpiCardGrid: React.FC<KpiCardGridProps> = ({ kpis, targetAmount: _targetAm
   // ── 2행: 일평균 순매출 + 라이브일자 순매출 ──
   const row2: { label: string; value: string; status: 'neutral' }[] = [];
 
-  if (hasSales && context?.startDate && context?.endDate) {
-    const days = countDays(context.startDate, context.endDate);
-    const dailyAvg = Math.round(kpis.netSales / days);
+  if (hasSales && timeSeries.length > 0) {
+    const dailyAvg = Math.round(kpis.netSales / timeSeries.length);
     row2.push({ label: '일평균 순매출', value: formatCurrency(dailyAvg), status: 'neutral' });
   }
 
-  if (hasSales) {
-    const liveDays = timeSeries.filter((d) => d.isLiveDate);
-    if (liveDays.length === 1) {
-      row2.push({ label: '라이브 순매출', value: formatCurrency(liveDays[0].netSales), status: 'neutral' });
-    } else if (liveDays.length >= 2) {
-      const liveTotal = liveDays.reduce((sum, d) => sum + d.netSales, 0);
+  if (hasSales && liveNetSales.length > 0) {
+    if (liveNetSales.length === 1) {
+      row2.push({ label: '라이브 순매출', value: formatCurrency(liveNetSales[0].netSales), status: 'neutral' });
+    } else {
+      const liveTotal = liveNetSales.reduce((sum, d) => sum + d.netSales, 0);
       row2.push({ label: '라이브 합계', value: formatCurrency(liveTotal), status: 'neutral' });
-      liveDays.forEach((day, i) => {
+      liveNetSales.forEach((day, i) => {
         row2.push({ label: `라이브 ${i + 1}일차 (${day.date.slice(5)})`, value: formatCurrency(day.netSales), status: 'neutral' });
       });
     }
@@ -111,6 +110,13 @@ const KpiCardGrid: React.FC<KpiCardGridProps> = ({ kpis, targetAmount: _targetAm
               status={card.status}
             />
           ))}
+        </div>
+      )}
+      {/* 기획의도/주요혜택 */}
+      {context?.planningIntent && (
+        <div className="bg-white border border-gray-200 rounded-lg p-3 w-full">
+          <span className="text-sm font-bold text-gray-900">기획의도/주요혜택</span>
+          <p className="text-sm text-gray-700 mt-1 whitespace-pre-wrap">{context.planningIntent}</p>
         </div>
       )}
     </div>

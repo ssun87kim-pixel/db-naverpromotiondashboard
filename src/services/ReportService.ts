@@ -1,5 +1,5 @@
 import * as XLSX from 'xlsx';
-import type { PromotionRecord, KpiSummary, DailyTimeSeries, ProductRow } from '../types/index';
+import type { PromotionRecord, KpiSummary, DailyTimeSeries, ProductRow, LiveDayResult } from '../types/index';
 
 // ============================================================
 // 타입 정의
@@ -10,6 +10,7 @@ export interface EventData {
   kpis: KpiSummary;
   timeSeries: DailyTimeSeries[];
   productRows: ProductRow[];
+  liveNetSales: LiveDayResult[];
 }
 
 export interface ReportData {
@@ -17,6 +18,7 @@ export interface ReportData {
   kpis: KpiSummary;
   timeSeries: DailyTimeSeries[];
   productRows: ProductRow[];
+  liveNetSales: LiveDayResult[];
   compareEvents?: EventData[];
 }
 
@@ -80,22 +82,16 @@ function addEventSheets(
   XLSX.utils.book_append_sheet(wb, ws1, safeSheetName(`${prefix}_컨텍스트`));
 
   // ── KPI 시트 ──
-  const eventDays = (() => {
-    const s = new Date(ctx.startDate);
-    const e = new Date(ctx.endDate);
-    const diff = e.getTime() - s.getTime();
-    return Math.max(1, Math.round(diff / (1000 * 60 * 60 * 24)) + 1);
-  })();
-  const dailyAvgNetSales = Math.round(kpis.netSales / eventDays);
+  const dataDays = event.timeSeries.length || 1;
+  const dailyAvgNetSales = Math.round(kpis.netSales / dataDays);
 
-  const liveDays = event.timeSeries.filter((d) => d.isLiveDate);
   const liveDayRows: (string | number)[][] = [];
-  if (liveDays.length === 1) {
-    liveDayRows.push(['라이브 순매출', liveDays[0].netSales]);
-  } else if (liveDays.length >= 2) {
-    const liveTotal = liveDays.reduce((sum, d) => sum + d.netSales, 0);
+  if (event.liveNetSales.length === 1) {
+    liveDayRows.push(['라이브 순매출', event.liveNetSales[0].netSales]);
+  } else if (event.liveNetSales.length >= 2) {
+    const liveTotal = event.liveNetSales.reduce((sum, d) => sum + d.netSales, 0);
     liveDayRows.push(['라이브 합계', liveTotal]);
-    liveDays.forEach((d, i) => {
+    event.liveNetSales.forEach((d, i) => {
       liveDayRows.push([`라이브 ${i + 1}일차 (${d.date.slice(5)})`, d.netSales]);
     });
   }
@@ -241,7 +237,7 @@ export async function exportPdf(elementId: string, filename: string): Promise<vo
 
     for (const section of targets) {
       const canvas = await html2canvas(section, {
-        scale: 2,
+        scale: 1.5,
         useCORS: true,
         logging: false,
         backgroundColor: '#ffffff',
@@ -254,8 +250,14 @@ export async function exportPdf(elementId: string, filename: string): Promise<vo
       // 비율 유지하며 mm 변환
       const imgHeightMM = (imgHeightPx / imgWidthPx) * CONTENT_WIDTH_MM;
 
-      // 섹션이 현재 페이지에 들어가지 않으면 새 페이지
-      if (currentY + imgHeightMM > A4_HEIGHT_MM - MARGIN_MM && currentY > MARGIN_MM) {
+      // data-pdf-newpage 속성이 있으면 무조건 새 페이지
+      const forceNewPage = section.hasAttribute('data-pdf-newpage');
+
+      if (forceNewPage && currentY > MARGIN_MM) {
+        pdf.addPage();
+        currentY = MARGIN_MM;
+      } else if (currentY + imgHeightMM > A4_HEIGHT_MM - MARGIN_MM && currentY > MARGIN_MM) {
+        // 섹션이 현재 페이지에 들어가지 않으면 새 페이지
         pdf.addPage();
         currentY = MARGIN_MM;
       }
@@ -297,7 +299,15 @@ export async function exportPdf(elementId: string, filename: string): Promise<vo
       }
     }
 
-    pdf.save(filename);
+    const blob = pdf.output('blob');
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
   } catch (err) {
     if (err instanceof Error && err.message.includes('파일 생성에 실패')) {
       throw err;
