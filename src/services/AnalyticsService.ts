@@ -28,7 +28,6 @@ export function computeKpis(
       : null;
 
   const paymentCount = products ? products.rows.reduce((sum, r) => sum + r.paymentCount, 0) : 0;
-  const refundCount = products ? products.rows.reduce((sum, r) => sum + r.refundCount, 0) : 0;
   const couponTotal = products ? products.rows.reduce((sum, r) => sum + r.couponTotal, 0) : 0;
 
   const refundRate =

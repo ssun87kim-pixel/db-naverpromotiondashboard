@@ -60,18 +60,6 @@ function sheetToRows(buffer: ArrayBuffer): Record<string, unknown>[] {
 // 컬럼 탐색 헬퍼 (부분 일치)
 // ============================================================
 
-function findColumn(
-  row: Record<string, unknown>,
-  candidates: string[]
-): string | undefined {
-  const keys = Object.keys(row);
-  for (const candidate of candidates) {
-    const found = keys.find((k) => k.includes(candidate));
-    if (found !== undefined) return found;
-  }
-  return undefined;
-}
-
 function findColumnInHeaders(
   headers: string[],
   candidates: string[]

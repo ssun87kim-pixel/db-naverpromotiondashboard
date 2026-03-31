@@ -13,13 +13,6 @@ interface KpiCardGridProps {
   liveNetSales: LiveDayResult[];
 }
 
-/** startDate~endDate 사이의 일수 계산 */
-function countDays(startDate: string, endDate: string): number {
-  const s = new Date(startDate);
-  const e = new Date(endDate);
-  const diff = e.getTime() - s.getTime();
-  return Math.max(1, Math.round(diff / (1000 * 60 * 60 * 24)) + 1);
-}
 
 const KpiCardGrid: React.FC<KpiCardGridProps> = ({ kpis, targetAmount: _targetAmount, hasSales, hasProducts, context, timeSeries, liveNetSales }) => {
   const achievementStatus =

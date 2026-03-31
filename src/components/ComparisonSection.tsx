@@ -97,13 +97,6 @@ function getKpiStatus(row: KpiRow, kpis: KpiSummary | null, parsed: ParsedInfo):
   return row.getStatus(kpis);
 }
 
-function countDays(startDate: string, endDate: string): number {
-  const s = new Date(startDate);
-  const e = new Date(endDate);
-  const diff = e.getTime() - s.getTime();
-  return Math.max(1, Math.round(diff / (1000 * 60 * 60 * 24)) + 1);
-}
-
 interface ColumnProps {
   title: string;
   subtitle?: string;
@@ -115,7 +108,7 @@ interface ColumnProps {
   onClose?: () => void;
 }
 
-const ComparisonColumn: React.FC<ColumnProps> = ({ title, subtitle, kpis, parsed, context, colTimeSeries = [], colLiveNetSales = [], onClose }) => {
+const ComparisonColumn: React.FC<ColumnProps> = ({ title, subtitle, kpis, parsed, context: _context, colTimeSeries = [], colLiveNetSales = [], onClose }) => {
   // 2행 카드: 일평균 순매출 + 라이브일자 순매출
   const extraCards: { label: string; value: string }[] = [];
 
