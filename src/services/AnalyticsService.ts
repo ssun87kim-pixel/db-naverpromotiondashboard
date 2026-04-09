@@ -28,6 +28,7 @@ export function computeKpis(
       : null;
 
   const paymentCount = products ? products.rows.reduce((sum, r) => sum + r.paymentCount, 0) : 0;
+  const refundCount = products ? products.rows.reduce((sum, r) => sum + r.refundCount, 0) : 0;
   const couponTotal = products ? products.rows.reduce((sum, r) => sum + r.couponTotal, 0) : 0;
 
   const refundRate =
@@ -156,7 +157,7 @@ export function computeProductStats(merged: MergedProductData): ProductRow[] {
   const rows = merged.rows;
   if (rows.length === 0) return [];
 
-  const totalQty = rows.reduce((sum, r) => sum + r.paymentQty, 0);
+  const totalQty = rows.reduce((sum, r) => sum + (r.paymentQty - r.refundQty), 0);
 
   // netAmount = paymentAmount - refundAmount
   const totalNetAmount = rows.reduce(
@@ -179,7 +180,8 @@ export function computeProductStats(merged: MergedProductData): ProductRow[] {
 
   const productRows: ProductRow[] = rows.map((r, i) => {
     const netAmount = r.paymentAmount - r.refundAmount;
-    const qtyShare = totalQty > 0 ? (r.paymentQty / totalQty) * 100 : 0;
+    const netQty = r.paymentQty - r.refundQty;
+    const qtyShare = totalQty > 0 ? (netQty / totalQty) * 100 : 0;
     const amountShare =
       totalNetAmount > 0 ? (netAmount / totalNetAmount) * 100 : 0;
     const refundRate = perRowRefundRates[i];
@@ -189,10 +191,12 @@ export function computeProductStats(merged: MergedProductData): ProductRow[] {
       largeCat: r.largeCat,
       productName: r.productName,
       productId: r.productId,
-      qty: r.paymentQty,
+      qty: netQty,
       qtyShare,
       netAmount,
+      refundAmount: r.refundAmount,
       amountShare,
+      refundQty: r.refundQty,
       refundCount: r.refundCount,
       refundRate,
       isHighRefund: refundRate > avgRefundRate,

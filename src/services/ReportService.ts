@@ -82,8 +82,8 @@ function addEventSheets(
   XLSX.utils.book_append_sheet(wb, ws1, safeSheetName(`${prefix}_컨텍스트`));
 
   // ── KPI 시트 ──
-  const dataDays = event.timeSeries.length || 1;
-  const dailyAvgNetSales = Math.round(kpis.netSales / dataDays);
+  const datadays = event.timeSeries.length || 1;
+  const dailyAvgNetSales = Math.round(kpis.netSales / datadays);
 
   const liveDayRows: (string | number)[][] = [];
   if (event.liveNetSales.length === 1) {

@@ -130,8 +130,8 @@ const DownloadButtons: React.FC<DownloadButtonsProps> = ({
           'flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg border font-medium shadow-sm',
           'transition-colors',
           isDisabled || pdfLoading
-            ? 'opacity-40 cursor-not-allowed bg-red-600 border-red-600 text-white'
-            : 'bg-red-600 border-red-600 text-white hover:bg-red-700 cursor-pointer',
+            ? 'opacity-40 cursor-not-allowed bg-red border-red text-white'
+            : 'bg-red border-red text-white hover:brightness-90 cursor-pointer',
         ].join(' ')}
         aria-label="PDF 다운로드"
         data-testid="download-pdf"
